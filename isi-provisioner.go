@@ -32,41 +32,32 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
+	isi "github.com/codedellemc/goisilon"
+
 )
 
 const (
-	resyncPeriod              = 15 * time.Second
-	provisionerName           = "example.com/hostpath"
-	exponentialBackOffOnError = false
-	failedRetryThreshold      = 5
-	leasePeriod               = controller.DefaultLeaseDuration
-	retryPeriod               = controller.DefaultRetryPeriod
-	renewDeadline             = controller.DefaultRenewDeadline
-	termLimit                 = controller.DefaultTermLimit
+	provisionerName           = "github.com/xphyr"
 )
 
-type hostPathProvisioner struct {
-	// The directory to create PV-backing directories in
-	pvDir string
+type isilonProvisioner struct {
+	// Kubernetes Client. Use to retrieve Ceph admin secret
+	client kubernetes.Interface
 
 	// Identity of this hostPathProvisioner, set to node's name. Used to identify
 	// "this" provisioner's PVs.
 	identity string
 }
 
-// NewHostPathProvisioner creates a new hostpath provisioner
-func NewHostPathProvisioner() controller.Provisioner {
-	nodeName := os.Getenv("NODE_NAME")
-	if nodeName == "" {
-		glog.Fatal("env variable NODE_NAME must be set so that this provisioner can identify itself")
-	}
+// NewIsilonProvisioner creates a new Dell/EMC Isilon Provisioner
+func NewIsilonProvisioner(client kubernetes.Interface, id string) controller.Provisioner {
 	return &hostPathProvisioner{
-		pvDir:    "/tmp/hostpath-provisioner",
-		identity: nodeName,
+		client: client,
+		identity: id,
 	}
 }
 
-var _ controller.Provisioner = &hostPathProvisioner{}
+var _ controller.Provisioner = &isilonProvisioner{}
 
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
@@ -119,21 +110,44 @@ func (p *hostPathProvisioner) Delete(volume *v1.PersistentVolume) error {
 	return nil
 }
 
+var (
+	master     = flag.String("master", "", "Master URL")
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig"
+	id         = flag.String("id", "", "Unique provisioner identity")
+)
+
 func main() {
-	syscall.Umask(0)
 
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
-	// Create an InClusterConfig and use it to create a client for the controller
-	// to use to communicate with Kubernetes
-	config, err := rest.InClusterConfig()
+	var config *rest.Config
+	var err error
+	if *master != "" || *kubeconfig != "" {
+		config, err = clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
+	} else {
+		config, err = rest.InClusterConfig()
+	}
 	if err != nil {
 		glog.Fatalf("Failed to create config: %v", err)
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Fatalf("Failed to create client: %v", err)
+	}
+
+	prName := provisionerName
+	prNameFromEnv := os.Getenv(provisionerNameKey)
+	if prNameFromEnv != "" {
+		prName = prNameFromEnv
+	}
+
+	// By default, we use provisioner name as provisioner identity.
+	// User may specify their own identity with `-id` flag to distinguish each
+	// others, if they deploy more than one CephFS provisioners under same provisioner name.
+	prID := prName
+	if *id != "" {
+		prID = *id
 	}
 
 	// The controller needs to know what the server version is because out-of-tree
@@ -145,10 +159,17 @@ func main() {
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
-	hostPathProvisioner := NewHostPathProvisioner()
+	glog.Infof("Creating Isilon provisioner %s with identity: %s", prName, prID)
+	isilonFSProvisioner := newIsilonFSProvisioner(clientset, prID)
 
 	// Start the provision controller which will dynamically provision hostPath
 	// PVs
-	pc := controller.NewProvisionController(clientset, resyncPeriod, provisionerName, hostPathProvisioner, serverVersion.GitVersion, exponentialBackOffOnError, failedRetryThreshold, leasePeriod, renewDeadline, retryPeriod, termLimit)
+	pc := controller.NewProvisionController(
+		clientset,
+		prName,
+		isilonFSProvisioner,
+		serverVersion.GitVersion,
+	)
+
 	pc.Run(wait.NeverStop)
 }
