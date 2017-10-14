@@ -14,16 +14,16 @@
 
 .PHONY: image
 
-IMAGE?=isilon-provisioner
+IMAGE?=isi-provisioner
 
-image: isilon-provisioner
+image: isi-provisioner
 	docker build -t $(IMAGE) -f Dockerfile.scratch .
 
-hostpath-provisioner: $(shell find . -name "*.go")
+isi-provisioner: $(shell find . -name "*.go")
 	glide install -v --strip-vcs
-	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o isilon-provisioner .
+	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o isi-provisioner .
 
 .PHONY: clean
 clean:
 	rm -rf vendor
-	rm isilon-provisioner
+	rm isi-provisioner

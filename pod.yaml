@@ -1,11 +1,11 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: isilon-provisioner
+  name: isi-provisioner
 spec:
   containers:
-    - name: isilon-provisioner
-      image: isilon-provisioner:latest
+    - name: isi-provisioner
+      image: isi-provisioner:latest
       imagePullPolicy: "IfNotPresent"
       env:
         - name: NODE_NAME
@@ -14,8 +14,8 @@ spec:
               fieldPath: spec.nodeName
       volumeMounts:
         - name: pv-volume
-          mountPath: /tmp/isilon-provisioner
+          mountPath: /tmp/isi-provisioner
   volumes:
     - name: pv-volume
-      isilon:
-        path: /tmp/isilon-provisioner
+      isi:
+        path: /tmp/isi-provisioner
