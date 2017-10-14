@@ -1,0 +1,3 @@
+FROM scratch
+COPY isilon-provisioner /
+CMD ["/isilon-provisioner"]
