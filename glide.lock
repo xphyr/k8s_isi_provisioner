@@ -1,5 +1,5 @@
 hash: 7a6606165a0326ba9746d9a2f8fd671919e1ead5beb1d70b5239efc62a0991e9
-updated: 2017-10-14T20:41:36.23614-04:00
+updated: 2017-10-14T22:35:04.370243-04:00
 imports:
 - name: github.com/codedellemc/goisilon
   version: 2ea94fb4dd4f34507c9d67d8d2e35dcc0edb5f89
@@ -56,6 +56,10 @@ imports:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
   - simplelru
+- name: github.com/howeyc/gopass
+  version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
+- name: github.com/imdario/mergo
+  version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/kubernetes-incubator/external-storage
@@ -82,6 +86,10 @@ imports:
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
   - codec
+- name: golang.org/x/crypto
+  version: d172538b2cfce0c13cee31e647d0367aa8cd2486
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
   version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
@@ -91,6 +99,10 @@ imports:
   - http2/hpack
   - idna
   - lex/httplex
+- name: golang.org/x/sys
+  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  subpackages:
+  - unix
 - name: golang.org/x/text
   version: 2910a502d2bf9e43193af9d68ca516529614eed3
   subpackages:
@@ -231,13 +243,18 @@ imports:
   - pkg/version
   - rest
   - rest/watch
+  - tools/auth
   - tools/cache
+  - tools/clientcmd
   - tools/clientcmd/api
+  - tools/clientcmd/api/latest
+  - tools/clientcmd/api/v1
   - tools/metrics
   - tools/record
   - transport
   - util/cert
   - util/flowcontrol
+  - util/homedir
   - util/integer
 - name: k8s.io/kubernetes
   version: df7f4b3526a580ef122aaeef61ab52842a60a88b
