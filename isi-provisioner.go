@@ -44,23 +44,27 @@ type isilonProvisioner struct {
 	// Kubernetes Client. Use to retrieve Ceph admin secret
 	client kubernetes.Interface
 
-	// Identity of this hostPathProvisioner, set to node's name. Used to identify
+	// Identity of this isilonProvisioner, set to node's name. Used to identify
 	// "this" provisioner's PVs.
 	identity string
+
+	// Client for the isilon
+	isiClient isi.Client
 }
 
 // NewIsilonProvisioner creates a new Dell/EMC Isilon Provisioner
-func NewIsilonProvisioner(client kubernetes.Interface, id string) controller.Provisioner {
-	return &hostPathProvisioner{
+func NewIsilonProvisioner(client kubernetes.Interface, id string, iClient isi.Client) controller.Provisioner {
+	return &isilonProvisioner{
 		client: client,
 		identity: id,
+		isiClient: iClient,
 	}
 }
 
 var _ controller.Provisioner = &isilonProvisioner{}
 
 // Provision creates a storage asset and returns a PV object representing it.
-func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
 	path := path.Join(p.pvDir, options.PVName)
 
 	if err := os.MkdirAll(path, 0777); err != nil {
@@ -71,7 +75,7 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
-				"hostPathProvisionerIdentity": p.identity,
+				"isilonProvisionerIdentity": p.identity,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -81,7 +85,7 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
+				isilon: &v1.isilonVolumeSource{
 					Path: path,
 				},
 			},
@@ -93,8 +97,8 @@ func (p *hostPathProvisioner) Provision(options controller.VolumeOptions) (*v1.P
 
 // Delete removes the storage asset that was created by Provision represented
 // by the given PV.
-func (p *hostPathProvisioner) Delete(volume *v1.PersistentVolume) error {
-	ann, ok := volume.Annotations["hostPathProvisionerIdentity"]
+func (p *isilonProvisioner) Delete(volume *v1.PersistentVolume) error {
+	ann, ok := volume.Annotations["isilonProvisionerIdentity"]
 	if !ok {
 		return errors.New("identity annotation not found on PV")
 	}
@@ -157,12 +161,26 @@ func main() {
 		glog.Fatalf("Error getting server version: %v", err)
 	}
 
+	// We need to make a connection to the isilon 
+	// This is just a test for now, we will need to get all this config
+	isiclient, err := NewClientWithArgs(
+		context.Background(),
+		"https://192.168.5.200:8080",
+		"groupName",
+		"userName",
+		"password",
+		true,
+		"/ifs/volumes")
+	if err != nil {
+		glog.Fatalf("Error making connection to Isilon: %v", err)
+	}
+
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
 	glog.Infof("Creating Isilon provisioner %s with identity: %s", prName, prID)
-	isilonFSProvisioner := newIsilonFSProvisioner(clientset, prID)
+	isilonFSProvisioner := newIsilonFSProvisioner(clientset, prID, isiclient)
 
-	// Start the provision controller which will dynamically provision hostPath
+	// Start the provision controller which will dynamically provision isilon
 	// PVs
 	pc := controller.NewProvisionController(
 		clientset,
