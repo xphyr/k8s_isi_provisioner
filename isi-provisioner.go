@@ -21,57 +21,82 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path"
 	"strings"
+	"time"
+
+	"syscall"
 
 	isi "github.com/codedellemc/goisilon"
-	"github.com/kubernetes-incubator/external-storage/lib/controller"
-	"k8s.io/api/core/v1"
 
 	"github.com/golang/glog"
-
+	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	provisionerName    = "github.com/xphyr"
-	provisionerNameKey = "PROVISIONER_NAME"
+	provisionerName           = "example.com/isilon"
+	exponentialBackOffOnError = false
+	failedRetryThreshold      = 5
+	serverEnvVar              = "ISI_SERVER"
+	resyncPeriod              = 15 * time.Second
+	leasePeriod               = controller.DefaultLeaseDuration
+	retryPeriod               = controller.DefaultRetryPeriod
+	renewDeadline             = controller.DefaultRenewDeadline
+	termLimit                 = controller.DefaultTermLimit
 )
 
 type isilonProvisioner struct {
-	// Kubernetes Client. Use to retrieve Ceph admin secret
-	client kubernetes.Interface
-
 	// Identity of this isilonProvisioner, set to node's name. Used to identify
 	// "this" provisioner's PVs.
-	identity  string
-	server    string
-	path      string
+	identity string
+
 	isiClient *isi.Client
+	// The directory to create the new volume in, as well as the
+	// username, password and server to connect to
+	volumeDir string
+	// useName    string
+	serverName string
 }
 
 var _ controller.Provisioner = &isilonProvisioner{}
 
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-
-	// using the same naming convention from the nfs example, lets create a volume name
 	pvcNamespace := options.PVC.Namespace
 	pvcName := options.PVC.Name
 
-	volumeName := strings.Join([]string{pvcNamespace, pvcName, options.PVName}, "-")
-	// using the isilon client created, create a volume, then if it works
-	// create a nfs share we can return
-	volume, err := p.isiClient.CreateVolume(context.Background(), volumeName)
+	// Create a unique volume name based on the namespace requesting the pv
+	pvName := strings.Join([]string{pvcNamespace, pvcName, options.PVName}, "-")
+
+	// path will be required to create a working pv
+	path := path.Join(p.volumeDir, options.PVName)
+
+	// time to create the volume and export it
+	// as of right now I dont think we need the volume info it returns
+	_, err := p.isiClient.CreateVolume(context.Background(), pvName)
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.isiClient.ExportVolume(context.Background(), pvName)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := os.MkdirAll(path, 0777); err != nil {
+		return nil, err
+	}
 
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
 				"isilonProvisionerIdentity": p.identity,
+				"isilonVolume":              pvName,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
@@ -82,8 +107,8 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 				NFS: &v1.NFSVolumeSource{
-					Server:   p.server,
-					Path:     p.path,
+					Server:   p.serverName,
+					Path:     path,
 					ReadOnly: false,
 				},
 			},
@@ -103,61 +128,34 @@ func (p *isilonProvisioner) Delete(volume *v1.PersistentVolume) error {
 	if ann != p.identity {
 		return &controller.IgnoredError{Reason: "identity annotation on PV does not match ours"}
 	}
+	isiVolume, ok := volume.Annotations["isilonVolume"]
+	if !ok {
+		return &controller.IgnoredError{Reason: "No isilon volume defined"}
+	}
 
-	if err := os.RemoveAll(volume.Name); err != nil {
-		return err
+	// if we get here we can destroy the volume
+	if err := p.isiClient.DeleteVolume(context.Background(), isiVolume); err != nil {
+		panic(err)
 	}
 
 	return nil
 }
 
-var (
-	master     = flag.String("master", "", "Master URL")
-	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig")
-	id         = flag.String("id", "", "Unique provisioner identity")
-)
-
 func main() {
+	syscall.Umask(0)
 
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
-	server := os.Getenv("NFS_SERVER")
-	if server == "" {
-		glog.Fatal("NFS_SERVER not set")
-	}
-	path := os.Getenv("NFS_PATH")
-	if path == "" {
-		glog.Fatal("NFS_PATH not set")
-	}
-
-	var config *rest.Config
-	var err error
-	if *master != "" || *kubeconfig != "" {
-		config, err = clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
-	} else {
-		config, err = rest.InClusterConfig()
-	}
+	// Create an InClusterConfig and use it to create a client for the controller
+	// to use to communicate with Kubernetes
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		glog.Fatalf("Failed to create config: %v", err)
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Fatalf("Failed to create client: %v", err)
-	}
-
-	prName := provisionerName
-	prNameFromEnv := os.Getenv(provisionerNameKey)
-	if prNameFromEnv != "" {
-		prName = prNameFromEnv
-	}
-
-	// By default, we use provisioner name as provisioner identity.
-	// User may specify their own identity with `-id` flag to distinguish each
-	// others, if they deploy more than one CephFS provisioners under same provisioner name.
-	prID := prName
-	if *id != "" {
-		prID = *id
 	}
 
 	// The controller needs to know what the server version is because out-of-tree
@@ -167,39 +165,48 @@ func main() {
 		glog.Fatalf("Error getting server version: %v", err)
 	}
 
-	// We need to make a connection to the isilon
-	// This is just a test for now, we will need to get all this config
-	ic, err := isi.NewClientWithArgs(
+	// Get server name and NFS root path from environment
+	isiServer := os.Getenv("ISI_SERVER")
+	if isiServer == "" {
+		glog.Fatal("ISI_SERVER not set")
+	}
+	isiPath := os.Getenv("ISI_PATH")
+	if isiPath == "" {
+		glog.Fatal("ISI_PATH not set")
+	}
+	isiUser := os.Getenv("ISI_USER")
+	if isiUser == "" {
+		glog.Fatal("ISI_USER not set")
+	}
+	isiPass := os.Getenv("ISI_PASS")
+	if isiPass == "" {
+		glog.Fatal("ISI_PASS not set")
+	}
+
+	i, err := isi.NewClientWithArgs(
 		context.Background(),
-		"https://192.168.5.200:8080",
+		isiServer,
 		true,
-		"userName",
-		"groupName",
-		"password",
-		"/ifs/volumes")
+		isiUser,
+		"group",
+		isiPass,
+		isiPath,
+	)
 	if err != nil {
-		glog.Fatalf("Error making connection to Isilon: %v", err)
+		panic(err)
 	}
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
-	glog.Infof("Creating Isilon provisioner %s with identity: %s", prName, prID)
-
 	isilonProvisioner := &isilonProvisioner{
-		server:    server,
-		path:      path,
-		identity:  prID,
-		isiClient: ic,
+		identity:   isiServer,
+		isiClient:  i,
+		volumeDir:  isiPath,
+		serverName: isiServer,
 	}
 
 	// Start the provision controller which will dynamically provision isilon
 	// PVs
-	pc := controller.NewProvisionController(
-		clientset,
-		prName,
-		isilonProvisioner,
-		serverVersion.GitVersion,
-	)
-
+	pc := controller.NewProvisionController(clientset, resyncPeriod, isiServer, isilonProvisioner, serverVersion.GitVersion, exponentialBackOffOnError, failedRetryThreshold, leasePeriod, renewDeadline, retryPeriod, termLimit)
 	pc.Run(wait.NeverStop)
 }
