@@ -21,7 +21,7 @@ image: isi-provisioner
 
 isi-provisioner: $(shell find . -name "*.go")
 	glide install -v --strip-vcs
-	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o isi-provisioner .
+	GOOS=linux CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o isi-provisioner .
 
 .PHONY: clean
 clean:

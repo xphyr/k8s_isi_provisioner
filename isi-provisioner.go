@@ -183,9 +183,11 @@ func main() {
 		glog.Fatal("ISI_PASS not set")
 	}
 
+	isiEndpoint := "https://" + isiServer + ":8080"
+
 	i, err := isi.NewClientWithArgs(
 		context.Background(),
-		isiServer,
+		isiEndpoint,
 		true,
 		isiUser,
 		"group",
@@ -207,6 +209,6 @@ func main() {
 
 	// Start the provision controller which will dynamically provision isilon
 	// PVs
-	pc := controller.NewProvisionController(clientset, resyncPeriod, isiServer, isilonProvisioner, serverVersion.GitVersion, exponentialBackOffOnError, failedRetryThreshold, leasePeriod, renewDeadline, retryPeriod, termLimit)
+	pc := controller.NewProvisionController(clientset, resyncPeriod, provisionerName, isilonProvisioner, serverVersion.GitVersion, exponentialBackOffOnError, failedRetryThreshold, leasePeriod, renewDeadline, retryPeriod, termLimit)
 	pc.Run(wait.NeverStop)
 }

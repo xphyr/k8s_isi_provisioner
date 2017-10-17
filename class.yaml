@@ -2,4 +2,4 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1beta1
 metadata:
   name: k8s-isilon
-provisioner: github.com/xphyr
+provisioner: example.com/isilon

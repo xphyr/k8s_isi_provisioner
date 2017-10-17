@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: hostpath
+  name: isilon
   annotations:
     volume.beta.kubernetes.io/storage-class: "k8s-isilon"
 spec:
