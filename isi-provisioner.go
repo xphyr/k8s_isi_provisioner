@@ -78,11 +78,13 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 
 	// time to create the volume and export it
 	// as of right now I dont think we need the volume info it returns
-	_, err := p.isiClient.CreateVolume(context.Background(), pvName)
+	rcVolume, err := p.isiClient.CreateVolume(context.Background(), pvName)
+	glog.Infof("Got response code %v, while creating volume %v", rcVolume, pvName)
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.isiClient.ExportVolume(context.Background(), pvName)
+	rcExport, err := p.isiClient.ExportVolume(context.Background(), pvName)
+	glog.Infof("Got response code %v, while creating export %v", rcExport, pvName)
 	if err != nil {
 		panic(err)
 	}
@@ -131,6 +133,10 @@ func (p *isilonProvisioner) Delete(volume *v1.PersistentVolume) error {
 	isiVolume, ok := volume.Annotations["isilonVolume"]
 	if !ok {
 		return &controller.IgnoredError{Reason: "No isilon volume defined"}
+	}
+	// if we get here we can destroy the volume
+	if err := p.isiClient.Unexport(context.Background(), isiVolume); err != nil {
+		panic(err)
 	}
 
 	// if we get here we can destroy the volume
@@ -182,6 +188,10 @@ func main() {
 	if isiPass == "" {
 		glog.Fatal("ISI_PASS not set")
 	}
+	isiGroup := os.Getenv("ISI_GROUP")
+	if isiPass == "" {
+		glog.Fatal("ISI_GROUP not set")
+	}
 
 	isiEndpoint := "https://" + isiServer + ":8080"
 
@@ -190,7 +200,7 @@ func main() {
 		isiEndpoint,
 		true,
 		isiUser,
-		"group",
+		isiGroup,
 		isiPass,
 		isiPath,
 	)

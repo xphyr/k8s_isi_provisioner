@@ -16,3 +16,5 @@ spec:
           value: admin
         - name: ISI_PASS
           value: password
+        - name: ISI_GROUP
+          value: Users
