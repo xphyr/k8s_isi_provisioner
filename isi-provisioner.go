@@ -61,14 +61,19 @@ type isilonProvisioner struct {
 	volumeDir string
 	// useName    string
 	serverName string
+	// apply/enfoce quotas to volumes
+	quotaEnable bool
 }
 
 var _ controller.Provisioner = &isilonProvisioner{}
+var version = "Version not set"
 
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
 	pvcNamespace := options.PVC.Namespace
 	pvcName := options.PVC.Name
+	capacity := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+	pvcSize := capacity.Value()
 
 	// Create a unique volume name based on the namespace requesting the pv
 	pvName := strings.Join([]string{pvcNamespace, pvcName, options.PVName}, "-")
@@ -82,6 +87,18 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 	glog.Infof("Got response code %v, while creating volume %v", rcVolume, pvName)
 	if err != nil {
 		return nil, err
+	}
+
+	// if quotas are enabled, we need to set a quota on the volume
+	//
+	if p.quotaEnable {
+		// need to set the quota based on the requested pv size
+		// I think some math is going to be required here
+		// if a size isnt requested, and quotas are enabled we should fail
+		if pvcSize <= 0 {
+			return nil, errors.New("No storage size requested and quotas enabled")
+		}
+		p.isiClient.SetQuotaSize(context.Background(), pvName, pvcSize)
 	}
 	rcExport, err := p.isiClient.ExportVolume(context.Background(), pvName)
 	glog.Infof("Got response code %v, while creating export %v", rcExport, pvName)
@@ -134,6 +151,13 @@ func (p *isilonProvisioner) Delete(volume *v1.PersistentVolume) error {
 	if !ok {
 		return &controller.IgnoredError{Reason: "No isilon volume defined"}
 	}
+	// Back out the quota settings first
+	if p.quotaEnable {
+		if err := p.isiClient.ClearQuota(context.Background(), isiVolume); err != nil {
+			panic(err)
+		}
+	}
+
 	// if we get here we can destroy the volume
 	if err := p.isiClient.Unexport(context.Background(), isiVolume); err != nil {
 		panic(err)
@@ -153,6 +177,7 @@ func main() {
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
+	glog.Info("Starting Isilon Dynamic Provisioner version: " + version)
 	// Create an InClusterConfig and use it to create a client for the controller
 	// to use to communicate with Kubernetes
 	config, err := rest.InClusterConfig()
@@ -193,6 +218,17 @@ func main() {
 		glog.Fatal("ISI_GROUP not set")
 	}
 
+	// set isiquota to false by default
+	isiQuota := false
+	isiQuotaEnable := os.Getenv("ISI_QUOTA_ENABLE")
+
+	if isiQuotaEnable == "" {
+		glog.Info("ISI_QUOTA_ENABLED not set.  Quota support disabled")
+	} else {
+		glog.Info("Isilon quotas enabled")
+		isiQuota = true
+	}
+
 	isiEndpoint := "https://" + isiServer + ":8080"
 
 	i, err := isi.NewClientWithArgs(
@@ -211,10 +247,11 @@ func main() {
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
 	isilonProvisioner := &isilonProvisioner{
-		identity:   isiServer,
-		isiClient:  i,
-		volumeDir:  isiPath,
-		serverName: isiServer,
+		identity:    isiServer,
+		isiClient:   i,
+		volumeDir:   isiPath,
+		serverName:  isiServer,
+		quotaEnable: isiQuota,
 	}
 
 	// Start the provision controller which will dynamically provision isilon
