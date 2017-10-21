@@ -18,3 +18,5 @@ spec:
           value: password
         - name: ISI_GROUP
           value: Users
+        - name: ISI_QUOTA_ENABLE
+          value: "true"

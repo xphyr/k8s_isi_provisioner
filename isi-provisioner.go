@@ -75,11 +75,13 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 	capacity := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	pvcSize := capacity.Value()
 
+	glog.Infof("Got namespace: %s, name: %s, pvName: %s, size: %v", pvcNamespace, pvcName, options.PVName, pvcSize)
+
 	// Create a unique volume name based on the namespace requesting the pv
 	pvName := strings.Join([]string{pvcNamespace, pvcName, options.PVName}, "-")
 
 	// path will be required to create a working pv
-	path := path.Join(p.volumeDir, options.PVName)
+	path := path.Join(p.volumeDir, pvName)
 
 	// time to create the volume and export it
 	// as of right now I dont think we need the volume info it returns
@@ -152,9 +154,13 @@ func (p *isilonProvisioner) Delete(volume *v1.PersistentVolume) error {
 		return &controller.IgnoredError{Reason: "No isilon volume defined"}
 	}
 	// Back out the quota settings first
+
 	if p.quotaEnable {
-		if err := p.isiClient.ClearQuota(context.Background(), isiVolume); err != nil {
-			panic(err)
+		quota, _ := p.isiClient.GetQuota(context.Background(), isiVolume)
+		if quota != nil {
+			if err := p.isiClient.ClearQuota(context.Background(), isiVolume); err != nil {
+				panic(err)
+			}
 		}
 	}
 
