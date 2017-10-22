@@ -251,7 +251,7 @@ func main() {
 	}
 
 	glog.Info("Connecting to Isilon at: " + isiEndpoint)
-	glog.Info("Creating shares at: " + isiPass)
+	glog.Info("Creating exports at: " + isiPath)
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
