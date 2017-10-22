@@ -12,6 +12,12 @@ To build the software, run make.
 
 To deploy the provisioner, run 
 oc create -f pod.yaml
+Create a storage class using the class.yaml file 
+oc create -f class.yaml
+
+To create a persistent volume, create a pvc and add an annotaion:
+volume.beta.kubernetes.io/storage-class: "k8s-isilon"
+This will enable the automatic creation of a persistent volume.
 
 Tested against: 
 https://www.emc.com/products-solutions/trial-software-download/isilon.htm
