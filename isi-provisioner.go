@@ -250,6 +250,9 @@ func main() {
 		panic(err)
 	}
 
+	glog.Info("Connecting to Isilon at: " + isiEndpoint)
+	glog.Info("Creating shares at: " + isiPass)
+
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
 	isilonProvisioner := &isilonProvisioner{
