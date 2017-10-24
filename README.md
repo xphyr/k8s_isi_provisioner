@@ -1,4 +1,6 @@
 # k8s_isi_provisioner
+[![Go Report Card](https://goreportcard.com/badge/github.com/xphyr/k8s_isilon_provisioner)](https://goreportcard.com/report/github.com/xphyr/k8s_isilon_provisioner)
+
 Kubernetes external storage provisioner for Dell Isilon
 
 Based on the following:
