@@ -86,24 +86,25 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 	// time to create the volume and export it
 	// as of right now I dont think we need the volume info it returns
 	rcVolume, err := p.isiClient.CreateVolume(context.Background(), pvName)
-	glog.Infof("Got response code %v, while creating volume %v", rcVolume, pvName)
+	glog.Infof("Created volume: %s", rcVolume)
 	if err != nil {
 		return nil, err
 	}
 
 	// if quotas are enabled, we need to set a quota on the volume
-	//
 	if p.quotaEnable {
 		// need to set the quota based on the requested pv size
-		// I think some math is going to be required here
 		// if a size isnt requested, and quotas are enabled we should fail
 		if pvcSize <= 0 {
 			return nil, errors.New("No storage size requested and quotas enabled")
 		}
-		p.isiClient.SetQuotaSize(context.Background(), pvName, pvcSize)
+		err := p.isiClient.SetQuotaSize(context.Background(), pvName, pvcSize)
+		if err != nil {
+			glog.Info("Quota set to: %v on volume: %s", pvcSize, pvName)
+		}
 	}
 	rcExport, err := p.isiClient.ExportVolume(context.Background(), pvName)
-	glog.Infof("Got response code %v, while creating export %v", rcExport, pvName)
+	glog.Infof("Created Isilon export: %v", rcExport)
 	if err != nil {
 		panic(err)
 	}
@@ -226,13 +227,13 @@ func main() {
 
 	// set isiquota to false by default
 	isiQuota := false
-	isiQuotaEnable := os.Getenv("ISI_QUOTA_ENABLE")
+	isiQuotaEnable := strings.ToUpper(os.Getenv("ISI_QUOTA_ENABLE"))
 
-	if isiQuotaEnable == "" {
-		glog.Info("ISI_QUOTA_ENABLED not set.  Quota support disabled")
-	} else {
+	if isiQuotaEnable == "TRUE" {
 		glog.Info("Isilon quotas enabled")
 		isiQuota = true
+	} else {
+		glog.Info("ISI_QUOTA_ENABLED not set.  Quota support disabled")
 	}
 
 	isiEndpoint := "https://" + isiServer + ":8080"
