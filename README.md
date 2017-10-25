@@ -43,7 +43,5 @@ ISI\_QUOTA\_ENABLE|Enable the use of quotas.  Defaults to disabled. | FALSE or T
 
 ## Thanks
 
-Thanks to the developers of the external storage provisioner code and the docs that are making this possible to do.
-Thanks to Dell EMC {Code} for the great Isilon library.
-
-This is not sponsored by Dell EMC or Kubernetes Foundation. 
+Thanks to the developers of the Kubernetes external storage provisioner code and the docs that are making this possible to do.
+Thanks to Dell EMC {code} for the great Isilon library.
