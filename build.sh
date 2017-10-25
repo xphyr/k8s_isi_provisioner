@@ -19,10 +19,7 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-# Install glide, golint, cfssl
+# Install glide
 curl https://glide.sh/get | sh
-go get -u github.com/golang/lint/golint
 export PATH=$PATH:$GOPATH/bin
-go get -u github.com/alecthomas/gometalinter
-gometalinter --install
 make

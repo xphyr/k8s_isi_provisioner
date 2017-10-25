@@ -1,5 +1,5 @@
-hash: 352a39b04c2d58e3f6a04df5e01aef0e6d01ac1b4f2078b6e9ff252ad1da2106
-updated: 2017-10-24T20:02:56.068459-04:00
+hash: 46b179bf11b7cdadcc3b135be2a1be16694972e2c15cb3432c1171230bd2a4d1
+updated: 2017-10-24T21:05:46.266766-04:00
 imports:
 - name: github.com/codedellemc/goisilon
   version: 2ea94fb4dd4f34507c9d67d8d2e35dcc0edb5f89
