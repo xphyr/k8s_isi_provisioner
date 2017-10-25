@@ -1,6 +1,7 @@
 # k8s_isi_provisioner
 [![Build Status](https://travis-ci.org/xphyr/k8s_isi_provisioner.svg?branch=master)](https://travis-ci.org/xphyr/k8s_isi_provisioner.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xphyr/k8s_isi_provisioner)](https://goreportcard.com/report/github.com/xphyr/k8s_isi_provisioner)
+[![Docker Pulls](https://img.shields.io/docker/pulls/xphyr/k8s_isi_provisioner.svg)](https://hub.docker.com/r/xphyr/k8s_isi_provisioner/)
 
 Kubernetes external storage provisioner for Dell Isilon
 
