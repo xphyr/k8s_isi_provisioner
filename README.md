@@ -9,8 +9,11 @@ https://github.com/kubernetes-incubator/external-storage
 https://github.com/codedellemc/goisilon
 
 Instructions:
-In order to use this external provisioner, you will need to compile the code, as it is not published to dockerhub yet.
-To do so ensure you have go, and glide as well as make installed.
+In order to use this external provisioner, you can use the image pushed to docker hub "xphyr/k8s\_isi\_provisioner", or build it yourself.
+
+Building
+--------
+To build this provisioner, ensure you have go, and glide installed.  This code has been tested with Go 1.8 and higher.
 To build the software, run make.
 
 To deploy the provisioner, run 
