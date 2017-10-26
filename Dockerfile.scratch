@@ -1,3 +1,3 @@
 FROM scratch
-COPY isi-provisioner /
-CMD ["/isi-provisioner"]
+COPY k8s_isi_provisioner /
+CMD ["/k8s_isi_provisioner"]

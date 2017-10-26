@@ -1,4 +1,4 @@
-# Copyright 2016 The Kubernetes Authors.
+# Copyright 2017 Mark DeNeve.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ image: isi-provisioner
 
 isi-provisioner: $(shell find . -name "*.go")
 	glide install -v
-	GOOS=linux CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static" -X main.version=$(GIT_VERSION)' -o isi-provisioner .
+	GOOS=linux CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static" -X main.version=$(GIT_VERSION)' -o k8s_isi_provisioner .
 
 .PHONY: clean
 clean:
 	rm -rf vendor
-	rm isi-provisioner
+	rm k8s_isi_provisioner

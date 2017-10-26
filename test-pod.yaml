@@ -12,10 +12,10 @@ spec:
       - "-c"
       - "touch /mnt/SUCCESS && exit 0 || exit 1"
     volumeMounts:
-      - name: hostpath-pvc
+      - name: isilon-pvc
         mountPath: "/mnt"
   restartPolicy: "Never"
   volumes:
-    - name: hostpath-pvc
+    - name: isilon-pvc
       persistentVolumeClaim:
-        claimName: hostpath
+        claimName: isilon-pvc

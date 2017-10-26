@@ -1,10 +1,10 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: isi-provisioner
+  name: k8s_isi_provisioner
 spec:
   containers:
-    - name: isi-provisioner
+    - name: k8s_isi_provisioner
       image: xphyr/k8s_isi_provisioner:latest
       imagePullPolicy: "IfNotPresent"
       env:
