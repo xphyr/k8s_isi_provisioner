@@ -17,6 +17,9 @@ Building
 To build this provisioner, ensure you have go, and glide installed.  This code has been tested with Go 1.8 and higher.
 To build the software, run make.
 
+The provisioner requires permissions is you are running it in OpenShift (maybe Kubernetes it has not been tested in pure Kubernetes)
+oc adm policy add-cluster-role-to-user system:persistent-volume-provisioner system:serviceaccount:k8s-isi-provisioner:default
+
 To deploy the provisioner, run 
 oc create -f pod.yaml
 Create a storage class using the class.yaml file 

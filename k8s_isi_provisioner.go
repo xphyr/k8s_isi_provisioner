@@ -237,6 +237,8 @@ func main() {
 	}
 
 	isiEndpoint := "https://" + isiServer + ":8080"
+	glog.Info("Connecting to Isilon at: " + isiEndpoint)
+	glog.Info("Creating exports at: " + isiPath)
 
 	i, err := isi.NewClientWithArgs(
 		context.Background(),
@@ -251,8 +253,7 @@ func main() {
 		panic(err)
 	}
 
-	glog.Info("Connecting to Isilon at: " + isiEndpoint)
-	glog.Info("Creating exports at: " + isiPath)
+	glog.Info("Successfully connected to: " + isiEndpoint)
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
