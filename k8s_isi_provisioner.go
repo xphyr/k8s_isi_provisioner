@@ -24,6 +24,7 @@ import (
 	"path"
 	"strings"
 	"time"
+	"fmt"
 
 	"syscall"
 
@@ -113,12 +114,24 @@ func (p *isilonProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 		return nil, err
 	}
 
+	// Get the mount options of the storage class
+	mountOptions := ""
+	for k, v := range options.Parameters {
+		switch strings.ToLower(k) {
+		case "mountoptions":
+			mountOptions = v
+		default:
+			return nil, fmt.Errorf("invalid parameter: %q", k)
+		}
+	}
+
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
-				"isilonProvisionerIdentity": p.identity,
-				"isilonVolume":              pvName,
+				"isilonProvisionerIdentity": 								p.identity,
+				"isilonVolume":              								pvName,
+				"volume.beta.kubernetes.io/mount-options": 	mountOptions,
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{

@@ -17,15 +17,37 @@ Building
 To build this provisioner, ensure you have go, and glide installed.  This code has been tested with Go 1.8 and higher.
 To build the software, run make.
 
-The provisioner requires permissions is you are running it in OpenShift (maybe Kubernetes it has not been tested in pure Kubernetes)
+The provisioner requires permissions if you are running it in OpenShift.
+```
 oc adm policy add-cluster-role-to-user system:persistent-volume-provisioner system:serviceaccount:k8s-isi-provisioner:default
+```
+It also requires pemissions if you're running in pure Kubernetes:
+```
+kubectl create -f auth.yaml
+```
 
-To deploy the provisioner, run 
+To deploy the provisioner, run
+```
 oc create -f pod.yaml
-Create a storage class using the class.yaml file 
+```
+Create a storage class using the class.yaml file
+```
 oc create -f class.yaml
+```
 
-To create a persistent volume, create a pvc and add an annotaion:
+Or in Kubernetes, run:
+```
+kubectl create -f pod.yaml
+kubectl create -f class.yaml
+```
+
+Some versions of Isilon may require the use of NFSv3. In that case, run:
+```
+kubectl create -f class-with-mount-options.yaml
+```
+
+
+To create a persistent volume, create a pvc and add an annotation:
 volume.beta.kubernetes.io/storage-class: "k8s-isilon"
 This will enable the automatic creation of a persistent volume.
 
