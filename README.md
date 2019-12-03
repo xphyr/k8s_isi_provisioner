@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/xphyr/k8s_isi_provisioner.svg?branch=master)](https://travis-ci.org/xphyr/k8s_isi_provisioner.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xphyr/k8s_isi_provisioner)](https://goreportcard.com/report/github.com/xphyr/k8s_isi_provisioner)
 [![Docker Pulls](https://img.shields.io/docker/pulls/xphyr/k8s_isi_provisioner.svg)](https://hub.docker.com/r/xphyr/k8s_isi_provisioner/)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fxphyr%2Fk8s_isi_provisioner.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fxphyr%2Fk8s_isi_provisioner?ref=badge_shield)
 
 Kubernetes external storage provisioner for Dell Isilon
 
@@ -70,3 +71,6 @@ ISI\_QUOTA\_ENABLE|Enable the use of quotas.  Defaults to disabled. | FALSE or T
 
 Thanks to the developers of the Kubernetes external storage provisioner code and the docs that are making this possible to do.
 Thanks to Dell EMC {code} for the great Isilon library.
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fxphyr%2Fk8s_isi_provisioner.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fxphyr%2Fk8s_isi_provisioner?ref=badge_large)
