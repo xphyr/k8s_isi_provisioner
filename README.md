@@ -9,6 +9,9 @@ Based on the following:
 https://github.com/kubernetes-incubator/external-storage
 https://github.com/codedellemc/goisilon
 
+**ATTENTION: This repo is no longer maintained.** If you are using Kubernetes 1.14 or later please see the official CSI driver from Dell/EMC [https://github.com/dell/csi-isilon](https://github.com/dell/csi-isilon). If you are using Kubernetes older than 1.14 there is a fork of this project located here [https://github.com/tenortim/k8s_isi_provisioner](https://github.com/tenortim/k8s_isi_provisioner) that has been updated recently and will be a better place to start.
+
+
 Instructions:
 In order to use this external provisioner, you can use the image pushed to docker hub "xphyr/k8s\_isi\_provisioner", or build it yourself.
 
